@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart' as DotEnv;
 
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 Future main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   // NOTE: The filename will default to .env and doesn't need to be defined in this case
   await DotEnv.load(fileName: ".env");
   //...runapp
@@ -9,24 +13,37 @@ Future main() async {
 }
 
 class TodoApp extends StatelessWidget {
-  // This widget is the root of your application.
+  // Create the initialization Future outside of `build`:
+  final Future<FirebaseApp> _initialization = Firebase.initializeApp();
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-        title: 'Flutter Demo',
-        theme: ThemeData(
-          // This is the theme of your application.
-          //
-          // Try running your application with "flutter run". You'll see the
-          // application has a blue toolbar. Then, without quitting the app, try
-          // changing the primarySwatch below to Colors.green and then invoke
-          // "hot reload" (press "r" in the console where you ran "flutter run",
-          // or simply save your changes to "hot reload" in a Flutter IDE).
-          // Notice that the counter didn't reset back to zero; the application
-          // is not restarted.
-          primarySwatch: Colors.blue,
-        ),
-        home: new TodoList());
+    return FutureBuilder(
+      // Initialize FlutterFire:
+      future: _initialization,
+      builder: (context, snapshot) {
+        // Once complete, show your application
+        if (snapshot.connectionState == ConnectionState.done) {
+          return MaterialApp(
+              title: 'Flutter Demo',
+              theme: ThemeData(
+                // This is the theme of your application.
+                //
+                // Try running your application with "flutter run". You'll see the
+                // application has a blue toolbar. Then, without quitting the app, try
+                // changing the primarySwatch below to Colors.green and then invoke
+                // "hot reload" (press "r" in the console where you ran "flutter run",
+                // or simply save your changes to "hot reload" in a Flutter IDE).
+                // Notice that the counter didn't reset back to zero; the application
+                // is not restarted.
+                primarySwatch: Colors.blue,
+              ),
+              home: new TodoList());
+        }
+
+        return Text("Loading");
+      },
+    );
   }
 }
 
@@ -36,7 +53,11 @@ class TodoList extends StatefulWidget {
 }
 
 class TodoListState extends State<TodoList> {
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
   List<String> _todoItems = [];
+
+  // Create a CollectionReference called tasks that references the firestore collection
+  CollectionReference tasks = FirebaseFirestore.instance.collection('tasks');
 
   // Instead of autogenerating a todo item, _addTodoItem now accepts a string
   void _addTodoItem(String task) {
